@@ -1,0 +1,303 @@
+{
+    "$schema": "http://json-schema.org/draft-07/schema",
+    "title": "ALLI/O Diagram",
+    "description": "",
+    "definitions": {
+        "action": {
+            "type": "object",
+            "properties": {
+                "device": {
+                    "type": "string"
+                },
+                "action": {
+                    "type": "string"
+                },
+                "parameters": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/parameter"
+                    }
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "device",
+                "action"
+            ]
+        },
+        "condition": {
+            "type": "object",
+            "properties": {
+                "device": {
+                    "type": "string"
+                },
+                "condition": {
+                    "type": "string"
+                },
+                "parameters": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/parameter"
+                    }
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "device",
+                "condition"
+            ]
+        },
+        "parameter": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "value": {
+                    "anyOf": [
+                        {
+                            "type": "string"
+                        },
+                        {
+                            "type": "number"
+                        },
+                        {
+                            "$ref": "#/definitions/expression"
+                        }
+                    ]
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "name",
+                "value"
+            ]
+        },
+        "expression": {
+            "type": "object",
+            "properties": {
+                "expression": {
+                    "type": "array",
+                    "items": {
+                        "anyOf": [
+                            {
+                                "type": "string"
+                            },
+                            {
+                                "type": "number"
+                            },
+                            {
+                                "title": "operator",
+                                "type": "object",
+                                "properties": {
+                                    "operator": {
+                                        "enum": [
+                                            "+",
+                                            "-",
+                                            "*",
+                                            "/",
+                                            "%"
+                                        ]
+                                    }
+                                },
+                                "additionalProperties": false,
+                                "required": [
+                                    "operator"
+                                ]
+                            },
+                            {
+                                "title": "value",
+                                "type": "object",
+                                "properties": {
+                                    "device": {
+                                        "type": "string"
+                                    },
+                                    "value": {
+                                        "type": "string"
+                                    }
+                                },
+                                "additionalProperties": false,
+                                "required": [
+                                    "device",
+                                    "value"
+                                ]
+                            }
+                        ]
+                    },
+                    "minItems": 1
+                }
+            },
+            "additionalProperties": false,
+            "required": [
+                "expression"
+            ]
+        }
+    },
+    "type": "object",
+    "properties": {
+        "devices": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "type": {
+                        "type": "string"
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "name",
+                    "type"
+                ]
+            }
+        },
+        "diagrams": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "minLength": 1
+                    },
+                    "content": {
+                        "type": "array",
+                        "items": {
+                            "anyOf": [
+                                {
+                                    "title": "Begin",
+                                    "type": "object",
+                                    "properties": {
+                                        "type": {
+                                            "const": "begin"
+                                        },
+                                        "id": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "additionalProperties": false,
+                                    "required": [
+                                        "type"
+                                    ]
+                                },
+                                {
+                                    "title": "Command",
+                                    "type": "object",
+                                    "properties": {
+                                        "type": {
+                                            "const": "command"
+                                        },
+                                        "id": {
+                                            "type": "string"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "actions": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "$ref": "#/definitions/action"
+                                            }
+                                        }
+                                    },
+                                    "additionalProperties": false,
+                                    "required": [
+                                        "type"
+                                    ]
+                                },
+                                {
+                                    "title": "Transition",
+                                    "type": "object",
+                                    "properties": {
+                                        "type": {
+                                            "const": "transition"
+                                        },
+                                        "id": {
+                                            "type": "string"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "from": {
+                                            "type": "string"
+                                        },
+                                        "to": {
+                                            "type": "string"
+                                        },
+                                        "conditions": {
+                                            "type": "array",
+                                            "items": {
+                                                "anyOf": [
+                                                    {
+                                                        "type": "object",
+                                                        "$ref": "#/definitions/condition"
+                                                    },
+                                                    {
+                                                        "type": "object",
+                                                        "$ref": "#/definitions/expression"
+                                                    }
+                                                ]
+                                            }
+                                        }
+                                    },
+                                    "additionalProperties": false,
+                                    "required": [
+                                        "type",
+                                        "from",
+                                        "to"
+                                    ]
+                                },
+                                {
+                                    "title": "Back to Begin",
+                                    "type": "object",
+                                    "properties": {
+                                        "type": {
+                                            "const": "back to begin"
+                                        },
+                                        "id": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "additionalProperties": false,
+                                    "required": [
+                                        "type"
+                                    ]
+                                },
+                                {
+                                    "title": "End",
+                                    "type": "object",
+                                    "properties": {
+                                        "type": {
+                                            "const": "end"
+                                        },
+                                        "id": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "additionalProperties": false,
+                                    "required": [
+                                        "type"
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                },
+                "additionalProperties": false,
+                "required": [
+                    "content"
+                ]
+            }
+        }
+    },
+    "additionalProperties": false,
+    "required": [
+        "devices",
+        "diagrams"
+    ]
+}

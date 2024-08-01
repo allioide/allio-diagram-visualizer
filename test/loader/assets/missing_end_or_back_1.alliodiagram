@@ -1,0 +1,22 @@
+devices:
+  - name: LED1
+    type: LED
+  - name: Btn1
+    type: Button
+diagrams:
+  - name: Main
+    content:
+      - id: begin-001
+        type: begin
+      - type: transition
+        from: begin-001
+        to: command-001
+      - id: command-001
+        type: command
+        name: "Light On"
+        actions:
+          - device: LED1
+            action: On
+            parameters:
+              - name: Brightness
+                value: 100

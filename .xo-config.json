@@ -1,0 +1,42 @@
+{
+    "space": true,
+    "rules": {
+        "new-cap": "off",
+        "@typescript-eslint/naming-convention": [
+            "error",
+            {
+                "selector": "variable",
+                "format": [
+                    "camelCase"
+                ]
+            },
+            {
+                "selector": "variable",
+                "modifiers": [
+                    "global",
+                    "const"
+                ],
+                "format": [
+                    "camelCase",
+                    "UPPER_CASE"
+                ]
+            }
+        ],
+        "n/file-extension-in-import": [
+            "error",
+            "always"
+        ],
+        "@typescript-eslint/triple-slash-reference": [
+            "error",
+            {
+                "types": "prefer-import"
+            }
+        ]
+    },
+    "ignores": [
+        "script/",
+        "esbuild.js",
+        "ava.config.js",
+        "src/schema/alliodiagram.ts"
+    ]
+}
