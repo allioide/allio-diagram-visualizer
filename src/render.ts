@@ -24,10 +24,12 @@ const TRANSITION_CURVE_HSPACE = 30;
 const GENERIC_DEVICE_NAME_BOX_OFFSET = 5;
 const GENERIC_DEVICE_NAME_BOX_RADIUS = 4;
 const GENERIC_DEVICE_NAME_BOX_BG_COLOR = '#E6E6E6';
+const END_RADIUS = 4;
 
 const BEGIN_COLOR = '#9F31E9';
 const COMMAND_COLOR = '#00CC6A';
 const CONDITION_COLOR = '#FFAB00';
+const END_COLOR = '#FA2941';
 const TEXT_LITERAL_COLOR = '#C75450';
 const NUMBER_LITERAL_COLOR = '#2673FD';
 const VALUE_COLOR = '#9F31E9';
@@ -256,6 +258,14 @@ function createBackToBegin(backToBegin: BackToBegin): Path {
   return p;
 }
 
+function createEnd(end: End): Rect {
+  return new Rect()
+    .width(20)
+    .height(20)
+    .radius(END_RADIUS, END_RADIUS)
+    .fill(END_COLOR);
+}
+
 function getRootElement(content: DiagramComponent[]): Begin {
   const begins = content.filter(element => element.type === 'begin');
   if (begins.length === 0) {
@@ -353,6 +363,11 @@ function createComponent(component: DiagramComponent): SvgJsElement {
 
     case 'back to begin': {
       svg = createBackToBegin(component);
+      break;
+    }
+
+    case 'end': {
+      svg = createEnd(component);
       break;
     }
 
