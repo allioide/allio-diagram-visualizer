@@ -31,7 +31,9 @@
             {
                 "types": "prefer-import"
             }
-        ]
+        ],
+        "@typescript-eslint/consistent-type-definitions": "off",
+        "import/no-unassigned-import": "off"
     },
     "ignores": [
         "script/",

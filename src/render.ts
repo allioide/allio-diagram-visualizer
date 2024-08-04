@@ -8,6 +8,7 @@ import {
   type Expression,
 } from './schema/alliodiagram.js';
 import {FONT_REGULAR, FONT_BOLD} from './util/font.js';
+import './util/tspan.js';
 
 const DIAGRAM_BRANCH_VERTICAL_SPACE = 20;
 const BEGIN_WIDTH = 16;
@@ -22,9 +23,9 @@ const TRANSITION_EMPTY_LENGTH = 20;
 const TRANSITION_PADDING = 10;
 const TRANSITION_LINE_VGAP = 5;
 const TRANSITION_CURVE_HSPACE = 30;
-const GENERIC_DEVICE_NAME_BOX_OFFSET = 5;
-const GENERIC_DEVICE_NAME_BOX_RADIUS = 4;
-const GENERIC_DEVICE_NAME_BOX_BG_COLOR = '#E6E6E6';
+const ACTION_DEVICE_NAME_BOX_OFFSET = 5;
+const ACTION_DEVICE_NAME_BOX_RADIUS = 4;
+const CONDITION_EXPRESSION_DEVICE_NAME_BOX_GAP = 2;
 const END_RADIUS = 4;
 
 const BEGIN_COLOR = '#9F31E9';
@@ -34,6 +35,7 @@ const END_COLOR = '#FA2941';
 const TEXT_LITERAL_COLOR = '#C75450';
 const NUMBER_LITERAL_COLOR = '#2673FD';
 const VALUE_COLOR = '#9F31E9';
+const DEVICE_NAME_BG_COLOR = '#E6E6E6';
 
 type DiagramComponent = Command | Begin | Transition | BackToBegin | End;
 type SvgJsElement = Element;
@@ -77,7 +79,7 @@ function isCondition(term: Condition | Expression): term is Condition {
   return (term as Condition).device !== undefined;
 }
 
-function createGenericDeviceName(name: string): G {
+function createActionGenericDeviceName(name: string): G {
   const deviceNameText = new Text()
     .fill('#000000')
     .font(FONT_BOLD)
@@ -86,15 +88,15 @@ function createGenericDeviceName(name: string): G {
     .plain(name);
 
   const deviceNameBbox = deviceNameText.bbox();
-  const boxWidth = deviceNameBbox.width + (GENERIC_DEVICE_NAME_BOX_OFFSET * 2);
+  const boxWidth = deviceNameBbox.width + (ACTION_DEVICE_NAME_BOX_OFFSET * 2);
   // TODO: document why / 2
-  const boxHeight = (deviceNameBbox.height / 2) + (GENERIC_DEVICE_NAME_BOX_OFFSET * 2);
+  const boxHeight = (deviceNameBbox.height / 2) + (ACTION_DEVICE_NAME_BOX_OFFSET * 2);
 
   const deviceNameBg = new Rect()
     .width(boxWidth)
     .height(boxHeight)
-    .radius(GENERIC_DEVICE_NAME_BOX_RADIUS, GENERIC_DEVICE_NAME_BOX_RADIUS)
-    .fill(GENERIC_DEVICE_NAME_BOX_BG_COLOR)
+    .radius(ACTION_DEVICE_NAME_BOX_RADIUS, ACTION_DEVICE_NAME_BOX_RADIUS)
+    .fill(DEVICE_NAME_BG_COLOR)
     .x(0)
     .y(0);
 
@@ -106,9 +108,41 @@ function createGenericDeviceName(name: string): G {
   return g;
 }
 
+function createConditionOrExpressionGenericDeviceName(deviceName: string, text: Text, newLine: boolean, valueDeviceBg: Rect[]) {
+  const name = text.tspan(` ${deviceName} `).font(FONT_REGULAR).css('whiteSpace', 'pre').newline(newLine);
+  const nameBbox = name.bbox();
+  const nameDy = name.dy() ?? 0;
+  valueDeviceBg.push(new Rect()
+    .x(nameBbox.x)
+    .y(nameBbox.y + nameDy + (CONDITION_EXPRESSION_DEVICE_NAME_BOX_GAP / 2)) // FIXME: the bbox function somehow doesn't consider dy which is set when adding newline
+    .width(nameBbox.width)
+    .height(nameBbox.height - nameDy - CONDITION_EXPRESSION_DEVICE_NAME_BOX_GAP)
+    .radius(ACTION_DEVICE_NAME_BOX_RADIUS, ACTION_DEVICE_NAME_BOX_RADIUS)
+    .fill(DEVICE_NAME_BG_COLOR));
+}
+
+function createExpression(expression: Expression, text: Text, newLine: boolean, valueDeviceBg: Rect[]) {
+  const terms = expression.expression;
+  for (let i = 0; i < terms.length; i++) {
+    const term = terms[i];
+    const trailingSpace = (i === terms.length - 1) ? '' : ' ';
+    const needNewLine = (i === 0) && newLine;
+    if (typeof term === 'string') {
+      text.tspan(`${term}${trailingSpace}`).font(FONT_REGULAR).fill(TEXT_LITERAL_COLOR).newline(needNewLine);
+    } else if (typeof term === 'number') {
+      text.tspan(`${term}${trailingSpace}`).font(FONT_REGULAR).fill(NUMBER_LITERAL_COLOR).newline(needNewLine);
+    } else if (isOperator(term)) {
+      text.tspan(`${term.operator}${trailingSpace}`).font(FONT_REGULAR).newline(needNewLine);
+    } else {
+      createConditionOrExpressionGenericDeviceName(term.device, text, needNewLine, valueDeviceBg);
+      text.tspan(`.${term.value}${trailingSpace}`).font(FONT_REGULAR).fill(VALUE_COLOR);
+    }
+  }
+}
+
 function createAction(action: Action): G {
   // TODO: support multiple devices
-  const deviceName = createGenericDeviceName(action.device);
+  const deviceName = createActionGenericDeviceName(action.device);
   const deviceNameBbox = deviceName.bbox();
 
   const valueDeviceBg: Rect[] = [];
@@ -124,30 +158,7 @@ function createAction(action: Action): G {
         } else if (typeof parameter.value === 'number') {
           add.tspan(`${parameter.value}`).font(FONT_REGULAR).fill(NUMBER_LITERAL_COLOR);
         } else { // TODO: add enum
-          for (let i = 0; i < parameter.value.expression.length; i++) {
-            const term = parameter.value.expression[i];
-            const trailingSpace = (i === parameter.value.expression.length - 1) ? '' : ' ';
-            if (typeof term === 'string') {
-              add.tspan(`${term}${trailingSpace}`).font(FONT_REGULAR).fill(TEXT_LITERAL_COLOR);
-            } else if (typeof term === 'number') {
-              add.tspan(`${term}${trailingSpace}`).font(FONT_REGULAR).fill(NUMBER_LITERAL_COLOR);
-            } else if (isOperator(term)) {
-              add.tspan(`${term.operator}${trailingSpace}`).font(FONT_REGULAR);
-            } else { // TODO: add operator
-              const name = add.tspan(` ${term.device} `).font(FONT_REGULAR).css('whiteSpace', 'pre');
-              const nameBbox = name.bbox();
-              const boxWidth = nameBbox.width;
-              const boxHeight = nameBbox.height;
-              valueDeviceBg.push(new Rect()
-                .x(nameBbox.x)
-                .y(nameBbox.y)
-                .width(boxWidth)
-                .height(boxHeight)
-                .radius(GENERIC_DEVICE_NAME_BOX_RADIUS, GENERIC_DEVICE_NAME_BOX_RADIUS)
-                .fill(GENERIC_DEVICE_NAME_BOX_BG_COLOR));
-              add.tspan(`.${term.value}${trailingSpace}`).font(FONT_REGULAR).fill(VALUE_COLOR);
-            }
-          }
+          createExpression(parameter.value, add, false, valueDeviceBg);
         }
       }
     }
@@ -159,10 +170,10 @@ function createAction(action: Action): G {
   // offset and use it to move the value device bg
   const yOffset = actionText.bbox().y;
   for (const r of valueDeviceBg) {
-    r.dmove(GENERIC_DEVICE_NAME_BOX_OFFSET / 2, deviceNameBbox.height - yOffset);
+    r.dmove(ACTION_DEVICE_NAME_BOX_OFFSET / 2, deviceNameBbox.height - yOffset);
   }
 
-  actionText.move(GENERIC_DEVICE_NAME_BOX_OFFSET / 2, deviceNameBbox.height);
+  actionText.move(ACTION_DEVICE_NAME_BOX_OFFSET / 2, deviceNameBbox.height);
 
   const g = new G();
   g.add(deviceName);
@@ -227,26 +238,20 @@ function createTransition(transition: Transition): G {
     conditionText.text(add => {
       for (let i = 0; i < transition.conditions!.length; i++) {
         const term = transition.conditions![i];
-        const trailingSpace = (i === transition.conditions!.length - 1) ? '' : ' ';
+        const needNewLine = i > 0;
         if (isCondition(term)) {
-          const name = add.tspan(` ${term.device} `).font(FONT_REGULAR).css('whiteSpace', 'pre');
-          const nameBbox = name.bbox();
-          const boxWidth = nameBbox.width;
-          const boxHeight = nameBbox.height;
-          valueDeviceBg.push(new Rect()
-            .x(nameBbox.x)
-            .y(nameBbox.y)
-            .width(boxWidth)
-            .height(boxHeight)
-            .radius(GENERIC_DEVICE_NAME_BOX_RADIUS, GENERIC_DEVICE_NAME_BOX_RADIUS)
-            .fill(GENERIC_DEVICE_NAME_BOX_BG_COLOR));
-          // TODO: support parameter
+          createConditionOrExpressionGenericDeviceName(term.device, add, needNewLine, valueDeviceBg);
           add.tspan('.').font(FONT_REGULAR);
           add.tspan(`${term.condition}`).font(FONT_REGULAR).fill(CONDITION_COLOR);
-          add.tspan(`()${trailingSpace}`).font(FONT_REGULAR);
+          // TODO: support parameter
+          add.tspan('()').font(FONT_REGULAR);
+        } else {
+          createExpression(term, add, needNewLine, valueDeviceBg);
         }
-        // TODO: support expression
-        // TODO: multiple condition
+
+        if (i !== transition.conditions!.length - 1) {
+          add.tspan(' AND').font(FONT_REGULAR);
+        }
       }
     });
     const yOffset = conditionText.bbox().y;

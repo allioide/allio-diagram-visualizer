@@ -35,3 +35,12 @@ test('command block with short name', async t => runTest(t, 'command_name_short.
 
 test('command block with long name', async t => runTest(t, 'command_name_long.alliodiagram'));
 
+test('command block with expression', async t => runTest(t, 'command_with_expression.alliodiagram'));
+
+test('transition with one condition', async t => runTest(t, 'transition_with_one_condition.alliodiagram'));
+
+test('transition with two condition', async t => runTest(t, 'transition_with_two_conditions.alliodiagram'));
+
+test('transition with condition and expression (1/2)', async t => runTest(t, 'transition_with_condition_and_expression_1.alliodiagram'));
+
+test('transition with condition and expression (2/2)', async t => runTest(t, 'transition_with_condition_and_expression_2.alliodiagram'));

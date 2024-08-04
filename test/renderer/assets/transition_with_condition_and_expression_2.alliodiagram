@@ -1,0 +1,42 @@
+devices:
+  - name: LED1
+    type: LED
+  - name: Btn1
+    type: Button
+  - name: Light1
+    type: Light Sensor
+diagrams:
+  - name: Main
+    content:
+      - id: begin-001
+        type: begin
+      - type: transition
+        from: begin-001
+        to: command-001
+      - id: command-001
+        type: command
+        name: "Light on"
+        actions:
+          - device: LED1
+            action: On
+            parameters:
+              - name: Brightness
+                value:
+                  expression:
+                    - device: Light1
+                      value: intensity
+                    - operator: "%"
+                    - 50
+      - type: transition
+        from: command-001
+        to: back-001
+        conditions:
+          - expression:
+              - device: Light1
+                value: intensity
+              - operator: ">"
+              - 50
+          - device: Btn1
+            condition: Press
+      - id: back-001
+        type: back to begin
