@@ -8,7 +8,7 @@ import {
   NOTO_SANS_BOLD_DATA_URL,
 } from './util/font.js';
 
-export function getNodeCanvas(): Svg {
+export function getNodeCanvas(embeddedFont = true): Svg {
   /* eslint-disable @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-argument */
   config.setFontDir('./font');
   config.setFontFamilyMappings({'Noto Sans': 'NotoSans-Regular.ttf', 'Noto Sans Bold': 'NotoSans-Bold.ttf'});
@@ -24,8 +24,10 @@ export function getNodeCanvas(): Svg {
 
   const canvas = SVG<SVGSVGElement>(document.documentElement);
 
-  (canvas as any).fontface('Noto Sans', NOTO_SANS_REGULAR_CSS_SRC, NOTO_SANS_REGULAR_PROPS);
-  (canvas as any).fontface('Noto Sans', NOTO_SANS_BOLD_CSS_SRC, NOTO_SANS_BOLD_PROPS);
+  if (embeddedFont) {
+    (canvas as any).fontface('Noto Sans', NOTO_SANS_REGULAR_CSS_SRC, NOTO_SANS_REGULAR_PROPS);
+    (canvas as any).fontface('Noto Sans', NOTO_SANS_BOLD_CSS_SRC, NOTO_SANS_BOLD_PROPS);
+  }
   /* eslint-enable @typescript-eslint/no-unsafe-call,@typescript-eslint/no-unsafe-assignment,@typescript-eslint/no-unsafe-argument */
 
   return canvas;

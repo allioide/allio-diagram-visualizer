@@ -1,0 +1,11 @@
+devices: []
+diagrams:
+  - name: Main
+    content:
+      - id: begin-001
+        type: begin
+      - type: transition
+        from: begin-001
+        to: back-001
+      - id: back-001
+        type: end

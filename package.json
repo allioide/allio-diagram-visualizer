@@ -20,9 +20,12 @@
   },
   "scripts": {
     "build": "rimraf dist && npm run check-types && node esbuild.js && node script/postbuild.js",
+    "prepublishOnly": "npm run build",
     "check-types": "tsc --noEmit",
     "lint": "xo --fix",
-    "test": "rimraf build && tsc --project tsconfig.test.json && copyfiles test/**/*.alliodiagram build/ && ava",
+    "build:test": "rimraf build && tsc --project tsconfig.test.json && copyfiles test/**/*.alliodiagram build/",
+    "test": "npm run build:test && ava",
+    "test:update-snapshot": "npm run build:test && ava --update-snapshots",
     "compile-schema": "json2ts -i src/schema/alliodiagram.json -o src/schema/alliodiagram.ts"
   },
   "devDependencies": {
@@ -36,6 +39,7 @@
     "json-schema-to-typescript": "^14.1.0",
     "rimraf": "^6.0.1",
     "typescript": "^5.5.3",
+    "xml-formatter": "3.6.1",
     "xo": "^0.59.0"
   },
   "dependencies": {

@@ -16,6 +16,7 @@ const BEGIN_RADIUS = 10;
 const COMMAND_BOX_OFFSET = 6;
 const COMMAND_BOX_ACTION_GAP = 5;
 const COMMAND_BOX_RADIUS = 8;
+const COMMAND_BOX_NAME_HEIGHT = 18;
 const TRANSITION_LINE_WIDTH = 2;
 const TRANSITION_EMPTY_LENGTH = 20;
 const TRANSITION_PADDING = 10;
@@ -38,26 +39,33 @@ type DiagramComponent = Command | Begin | Transition | BackToBegin | End;
 type SvgJsElement = Element;
 
 class Region {
-  offsetX: number;
-  offsetY: number;
-  width: number;
-  height: number;
-
-  constructor(x: number, y: number, w: number, h: number) {
-    this.offsetX = x;
-    this.offsetY = y;
-    this.width = w;
-    this.height = h;
-  }
+  constructor(private topLeftOffsetX: number,
+    private topLeftOffsetY: number,
+    private centerOffsetY: number,
+    readonly width: number,
+    readonly height: number) {}
 
   offset(x: number, y: number): this {
-    this.offsetX += x;
-    this.offsetY += y;
+    this.topLeftOffsetX += x;
+    this.topLeftOffsetY += y;
+    this.centerOffsetY += y;
     return this;
   }
 
   getTopLeftPosition(): ArrayXY {
-    return [this.offsetX, this.offsetY];
+    return [this.topLeftOffsetX, this.topLeftOffsetY];
+  }
+
+  getTopLeftOffsetX(): number {
+    return this.topLeftOffsetX;
+  }
+
+  getTopLeftOffsetY(): number {
+    return this.topLeftOffsetY;
+  }
+
+  getCenterOffsetY(): number {
+    return this.centerOffsetY;
   }
 }
 
@@ -179,10 +187,17 @@ function createCommand(command: Command): G {
     actionGroup.add(action);
   }
 
-  actionGroup.translate(COMMAND_BOX_OFFSET, COMMAND_BOX_OFFSET);
+  const nameText = new Text();
+  nameText.font(FONT_REGULAR);
+  if (command.name) {
+    nameText.text(command.name);
+  }
 
+  nameText.move(0, 0);
+
+  const nameTextBbox = nameText.bbox();
   const actionGroupBbox = actionGroup.bbox();
-  const borderWidth = actionGroupBbox.width + (COMMAND_BOX_OFFSET * 2);
+  const borderWidth = Math.max(actionGroupBbox.width + (COMMAND_BOX_OFFSET * 2), nameTextBbox.width);
   const borderHeight = actionGroupBbox.height + (COMMAND_BOX_OFFSET * 2);
   const border = new Rect()
     .width(borderWidth)
@@ -192,8 +207,15 @@ function createCommand(command: Command): G {
     .stroke({color: COMMAND_COLOR, width: 1});
 
   const g = new G();
-  g.add(border);
-  g.add(actionGroup);
+  if (command.name) {
+    g.add(nameText);
+    g.add(border.translate(0, COMMAND_BOX_NAME_HEIGHT));
+    g.add(actionGroup.translate(COMMAND_BOX_OFFSET, COMMAND_BOX_OFFSET + COMMAND_BOX_NAME_HEIGHT));
+  } else {
+    g.add(border);
+    g.add(actionGroup.translate(COMMAND_BOX_OFFSET, COMMAND_BOX_OFFSET));
+  }
+
   return g;
 }
 
@@ -370,10 +392,6 @@ function createComponent(component: DiagramComponent): SvgJsElement {
       svg = createEnd(component);
       break;
     }
-
-    default: {
-      throw new Error('Unsuppport type');
-    }
   }
 
   return svg;
@@ -382,18 +400,32 @@ function createComponent(component: DiagramComponent): SvgJsElement {
 function getComponentSize(component: DiagramComponent, element: SvgJsElement) {
   const bbox = element.bbox();
   const width = (component.type === 'transition') ? (component.conditions ? bbox.width + (TRANSITION_PADDING * 2) : TRANSITION_EMPTY_LENGTH) : bbox.width;
-  const height = (component.type === 'transition') ? (bbox.height + TRANSITION_LINE_VGAP) * 2 : bbox.height;
+  const height = (component.type === 'transition') ? bbox.height + TRANSITION_LINE_VGAP : bbox.height;
   return [width, height];
 }
 
-function getInputPortPosition(element: SvgJsElement, topLeftPos: ArrayXY): ArrayXY {
+function getCenterPosition(component: DiagramComponent, element: SvgJsElement) {
   const bbox = element.bbox();
-  return [topLeftPos[0], topLeftPos[1] + (bbox.height / 2)];
+  if (component.type === 'command') {
+    return (bbox.height + COMMAND_BOX_NAME_HEIGHT) / 2;
+  }
+
+  if (component.type === 'transition') {
+    return bbox.height + TRANSITION_LINE_VGAP;
+  }
+
+  return bbox.height / 2;
 }
 
-function getOutputPortPosition(element: SvgJsElement, topLeftPos: ArrayXY): ArrayXY {
+function getInputPortPosition(component: DiagramComponent, element: SvgJsElement, topLeftPos: ArrayXY): ArrayXY {
+  const centerY = getCenterPosition(component, element);
+  return [topLeftPos[0], topLeftPos[1] + centerY];
+}
+
+function getOutputPortPosition(component: DiagramComponent, element: SvgJsElement, topLeftPos: ArrayXY): ArrayXY {
   const bbox = element.bbox();
-  return [topLeftPos[0] + bbox.width, topLeftPos[1] + (bbox.height / 2)];
+  const centerY = getCenterPosition(component, element);
+  return [topLeftPos[0] + bbox.width, topLeftPos[1] + centerY];
 }
 
 export function renderSvg(file: ALLIODiagram, canvas: Svg): string {
@@ -413,25 +445,37 @@ export function renderSvg(file: ALLIODiagram, canvas: Svg): string {
     const componentRegionMap = new Map<DiagramComponent, Region>();
     for (const currentElement of elementOrder) {
       const [currentElementWidth, currentElementHeight] = getComponentSize(currentElement, componentToSvgMap.get(currentElement)!);
+      const currentElementCenterY = getCenterPosition(currentElement, componentToSvgMap.get(currentElement)!);
       const childrenElement = transitionMap.get(currentElement)!;
       if (childrenElement.size === 0) {
-        componentRegionMap.set(currentElement, new Region(0, 0, currentElementWidth, currentElementHeight));
+        componentRegionMap.set(currentElement, new Region(0, 0, currentElementCenterY, currentElementWidth, currentElementHeight));
       } else {
         const childrenRegions = [...childrenElement].map(element => componentRegionMap.get(element)!);
-        const totalChildHeight = childrenRegions.map(element => element.height).reduce((a, b) => a + b, 0) + (DIAGRAM_BRANCH_VERTICAL_SPACE * (childrenElement.size - 1));
-        const currentElementTopY = (totalChildHeight - currentElementHeight) / 2;
-        const additionalSpace = (childrenElement.size > 1) ? TRANSITION_CURVE_HSPACE : 0;
 
+        // Layout all children vertically
+        const additionalHSpace = (childrenElement.size > 1) ? TRANSITION_CURVE_HSPACE : 0;
         let currentY = 0;
-        for (const child of childrenElement) {
-          const childRegion = componentRegionMap.get(child)!;
-          componentRegionMap.set(child, childRegion.offset(currentElementWidth + additionalSpace, currentY - currentElementTopY));
-          currentY += childRegion.height + DIAGRAM_BRANCH_VERTICAL_SPACE;
+        for (const region of childrenRegions) {
+          region.offset(currentElementWidth + additionalHSpace, currentY);
+          currentY += region.height + DIAGRAM_BRANCH_VERTICAL_SPACE;
         }
 
-        const totalWidth = currentElementWidth + additionalSpace + Math.max(...childrenRegions.map(element => element.width));
-        const totalHeight = Math.max(totalChildHeight, currentElementHeight);
-        componentRegionMap.set(currentElement, new Region(0, Math.max(0, currentElementTopY), totalWidth, totalHeight));
+        // Layout parent to center vertically among all children
+        const totalChildHeight = childrenRegions.map(element => element.height).reduce((a, b) => a + b, 0) + (DIAGRAM_BRANCH_VERTICAL_SPACE * (childrenElement.size - 1));
+        const currentElementCenterYRelativeToChildren = (childrenRegions[0].getCenterOffsetY() + childrenRegions.at(-1)!.getCenterOffsetY()) / 2;
+        const currentElementTopYRelativeToChildren = currentElementCenterYRelativeToChildren - currentElementCenterY;
+
+        // Move children based on parent location
+        for (const region of childrenRegions) {
+          region.offset(0, -currentElementTopYRelativeToChildren);
+        }
+
+        // Update region from parent to leaf node
+        const currentElementNewTopY = Math.max(0, currentElementTopYRelativeToChildren);
+        const currentElementNewCenterY = currentElementNewTopY + currentElementCenterY;
+        const totalWidth = currentElementWidth + additionalHSpace + Math.max(...childrenRegions.map(element => element.width));
+        const totalHeight = Math.max(currentElementHeight + currentElementNewTopY, totalChildHeight); // TODO: total child height should take into account topLeftY of top most child
+        componentRegionMap.set(currentElement, new Region(0, currentElementNewTopY, currentElementNewCenterY, totalWidth, totalHeight));
       }
     }
 
@@ -441,21 +485,21 @@ export function renderSvg(file: ALLIODiagram, canvas: Svg): string {
       const current = queue.shift()!;
       const svg = componentToSvgMap.get(current)!;
       const region = componentRegionMap.get(current)!;
-      svg.translate(((current.type === 'transition') ? region.offsetX + TRANSITION_PADDING : region.offsetX), region.offsetY);
+      svg.translate(((current.type === 'transition') ? region.getTopLeftOffsetX() + TRANSITION_PADDING : region.getTopLeftOffsetX()), region.getTopLeftOffsetY());
       g.add(svg);
 
       for (const child of transitionMap.get(current)!) {
-        componentRegionMap.get(child)!.offset(region.offsetX, region.offsetY);
+        componentRegionMap.get(child)!.offset(region.getTopLeftOffsetX(), region.getTopLeftOffsetY());
         queue.push(child);
       }
     }
 
     for (const transition of getAllTransitions(diagram.content)) {
       const sourceComponent = elementMap.get(transition.from)!;
-      const sourcePortPos = getOutputPortPosition(componentToSvgMap.get(sourceComponent)!,
+      const sourcePortPos = getOutputPortPosition(sourceComponent, componentToSvgMap.get(sourceComponent)!,
         componentRegionMap.get(sourceComponent)!.getTopLeftPosition());
       const destinationComponent = elementMap.get(transition.to)!;
-      const destinationPortPos = getInputPortPosition(componentToSvgMap.get(destinationComponent)!,
+      const destinationPortPos = getInputPortPosition(destinationComponent, componentToSvgMap.get(destinationComponent)!,
         componentRegionMap.get(destinationComponent)!.getTopLeftPosition());
 
       if (Math.abs(sourcePortPos[1] - destinationPortPos[1]) < 0.001) {
