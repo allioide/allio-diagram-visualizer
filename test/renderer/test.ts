@@ -44,3 +44,19 @@ test('transition with two condition', async t => runTest(t, 'transition_with_two
 test('transition with condition and expression (1/2)', async t => runTest(t, 'transition_with_condition_and_expression_1.alliodiagram'));
 
 test('transition with condition and expression (2/2)', async t => runTest(t, 'transition_with_condition_and_expression_2.alliodiagram'));
+
+test('diagram branch vspace calculation (1/8)', async t => runTest(t, 'diagram_branch_vspace_1.alliodiagram'));
+
+test('diagram branch vspace calculation (2/8)', async t => runTest(t, 'diagram_branch_vspace_2.alliodiagram'));
+
+test('diagram branch vspace calculation (3/8)', async t => runTest(t, 'diagram_branch_vspace_3.alliodiagram'));
+
+test('diagram branch vspace calculation (4/8)', async t => runTest(t, 'diagram_branch_vspace_4.alliodiagram'));
+
+test('diagram branch vspace calculation (5/8)', async t => runTest(t, 'diagram_branch_vspace_5.alliodiagram'));
+
+test('diagram branch vspace calculation (6/8)', async t => runTest(t, 'diagram_branch_vspace_6.alliodiagram'));
+
+test('diagram branch vspace calculation (7/8)', async t => runTest(t, 'diagram_branch_vspace_7.alliodiagram'));
+
+test('diagram branch vspace calculation (8/8)', async t => runTest(t, 'diagram_branch_vspace_8.alliodiagram'));

@@ -479,7 +479,7 @@ export function renderSvg(file: ALLIODiagram, canvas: Svg): string {
         const currentElementNewTopY = Math.max(0, currentElementTopYRelativeToChildren);
         const currentElementNewCenterY = currentElementNewTopY + currentElementCenterY;
         const totalWidth = currentElementWidth + additionalHSpace + Math.max(...childrenRegions.map(element => element.width));
-        const totalHeight = Math.max(currentElementHeight + currentElementNewTopY, totalChildHeight); // TODO: total child height should take into account topLeftY of top most child
+        const totalHeight = Math.max(currentElementHeight + currentElementNewTopY, totalChildHeight + Math.max(0, -currentElementTopYRelativeToChildren));
         componentRegionMap.set(currentElement, new Region(0, currentElementNewTopY, currentElementNewCenterY, totalWidth, totalHeight));
       }
     }

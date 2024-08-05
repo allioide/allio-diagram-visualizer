@@ -1,0 +1,77 @@
+devices:
+  - name: LED1
+    type: LED
+  - name: Btn1
+    type: Button
+  - name: Light1
+    type: Light Sensor
+  - name: Light2
+    type: Light Sensor
+diagrams:
+  - name: Main
+    content:
+      - id: begin-001
+        type: begin
+      - type: transition
+        from: begin-001
+        to: command-001
+      - id: command-001
+        type: command
+        name: "Command 1"
+        actions:
+          - device: LED1
+            action: Off
+      - type: transition
+        from: command-001
+        to: command-002
+        conditions:
+          - device: Btn1
+            condition: Press
+      - id: command-002
+        type: command
+        name: "Command 2"
+        actions:
+          - device: LED1
+            action: Off
+      - type: transition
+        from: command-002
+        to: back-001
+      - id: back-001
+        type: back to begin
+      - type: transition
+        from: command-001
+        to: command-003
+        conditions:
+          - device: Btn1
+            condition: Release
+          - expression:
+              - device: Light1
+                value: intensity
+              - operator: ">"
+              - 50
+          - expression:
+              - device: Light1
+                value: intensity
+              - operator: "<="
+              - 100
+          - expression:
+              - device: Light2
+                value: intensity
+              - operator: ">"
+              - 50
+          - expression:
+              - device: Light2
+                value: intensity
+              - operator: "<="
+              - 100
+      - id: command-003
+        type: command
+        name: "Command 3"
+        actions:
+          - device: LED1
+            action: Off
+      - type: transition
+        from: command-003
+        to: back-002
+      - id: back-002
+        type: back to begin
